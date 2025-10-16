@@ -17,12 +17,12 @@ export default function CreateReceipt() {
   const [products, setProducts] = useState([]);
   const [receipts, setReceipts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProducts();
@@ -32,9 +32,12 @@ export default function CreateReceipt() {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
-      setProducts(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setProducts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
+      // Set empty array on error to prevent .map() errors
+      setProducts([]);
       if (error.response) {
         // Server responded with error
         toast.error(`Error: ${error.response.data?.detail || 'Failed to load products'}`);
@@ -53,9 +56,12 @@ export default function CreateReceipt() {
   const fetchReceipts = async () => {
     try {
       const response = await axios.get(`${API}/receipts`);
-      setReceipts(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setReceipts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching receipts:", error);
+      // Set empty array on error to prevent .map() errors
+      setReceipts([]);
     }
   };
 

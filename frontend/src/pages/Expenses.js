@@ -28,9 +28,12 @@ export default function Expenses() {
   const fetchExpenses = async () => {
     try {
       const response = await axios.get(`${API}/expenses`);
-      setExpenses(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setExpenses(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching expenses:", error);
+      // Set empty array on error to prevent .map() errors
+      setExpenses([]);
       toast.error("Failed to load expenses");
     } finally {
       setLoading(false);

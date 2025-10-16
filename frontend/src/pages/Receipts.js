@@ -25,9 +25,12 @@ export default function Receipts() {
   const fetchReceipts = async () => {
     try {
       const response = await axios.get(`${API}/receipts`);
-      setReceipts(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setReceipts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching receipts:", error);
+      // Set empty array on error to prevent .map() errors
+      setReceipts([]);
       toast.error("Failed to load receipts");
     } finally {
       setLoading(false);
@@ -158,21 +161,21 @@ export default function Receipts() {
                   <tr key={receipt.id} data-testid={`receipt-row-${receipt.id}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-mono font-semibold text-gray-900">
-                        {receipt.receipt_number || `RCP-${receipt.id.substring(0, 8)}`}
+                        {receipt.receipt_number || (receipt.id ? `RCP-${receipt.id.substring(0, 8)}` : 'RCP')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {format(new Date(receipt.sale_date), "MMM dd, yyyy HH:mm")}
+                      {format(new Date(receipt.created_at || receipt.sale_date || Date.now()), "MMM dd, yyyy HH:mm")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      {receipt.product_name}
+                      {(receipt.items && receipt.items[0]?.product_name) || receipt.product_name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {receipt.quantity}
+                      {(receipt.items && receipt.items[0]?.quantity) || receipt.quantity || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-lg font-semibold text-emerald-600">
-                        ${receipt.total_amount.toFixed(2)}
+                        ${Number((receipt.total_amount ?? 0)).toFixed(2)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

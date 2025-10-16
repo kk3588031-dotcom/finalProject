@@ -33,9 +33,12 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
-      setProducts(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setProducts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
+      // Set empty array on error to prevent .map() errors
+      setProducts([]);
       toast.error("Failed to load products");
     } finally {
       setLoading(false);

@@ -31,9 +31,12 @@ export default function Sales() {
   const fetchSales = async () => {
     try {
       const response = await axios.get(`${API}/sales`);
-      setSales(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setSales(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching sales:", error);
+      // Set empty array on error to prevent .map() errors
+      setSales([]);
       toast.error("Failed to load sales");
     } finally {
       setLoading(false);
@@ -43,9 +46,12 @@ export default function Sales() {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
-      setProducts(response.data);
+      // Ensure we always have an array to prevent .map() errors
+      setProducts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
+      // Set empty array on error to prevent .map() errors
+      setProducts([]);
     }
   };
 
