@@ -6,8 +6,9 @@ import Products from "./pages/Products";
 import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
+import Receipts from "./pages/Receipts";
 import { Toaster } from "./components/ui/sonner";
-import { Store, Package, ShoppingCart, Receipt, BarChart3 } from "lucide-react";
+import { Store, Package, ShoppingCart, Receipt, FileText, BarChart3 } from "lucide-react";
 
 function Navigation() {
   const location = useLocation();
@@ -16,6 +17,7 @@ function Navigation() {
     { path: "/", label: "Dashboard", icon: Store },
     { path: "/products", label: "Products", icon: Package },
     { path: "/sales", label: "Sales", icon: ShoppingCart },
+    { path: "/receipts", label: "Receipts", icon: FileText },
     { path: "/expenses", label: "Expenses", icon: Receipt },
     { path: "/reports", label: "Reports", icon: BarChart3 },
   ];
