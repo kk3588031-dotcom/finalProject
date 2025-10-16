@@ -160,6 +160,9 @@ async def create_sale(sale_input: SaleCreate):
     total_amount = sale_input.quantity * product['selling_price']
     profit = (product['selling_price'] - product['cost_price']) * sale_input.quantity
     
+    # Generate receipt number
+    receipt_number = f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    
     sale_dict = {
         "product_id": sale_input.product_id,
         "product_name": product['name'],
@@ -168,6 +171,7 @@ async def create_sale(sale_input: SaleCreate):
         "selling_price": product['selling_price'],
         "total_amount": total_amount,
         "profit": profit,
+        "receipt_number": receipt_number,
         "sale_date": sale_input.sale_date or datetime.now(timezone.utc)
     }
     
