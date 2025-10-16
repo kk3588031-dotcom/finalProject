@@ -120,24 +120,35 @@ export default function CreateReceipt() {
 
   const handleSaveReceipt = async () => {
     if (cart.length === 0) {
-      toast.error("Cart is empty. Add items first.");
+      toast.error("Cart is empty. Please add items first.");
       return;
     }
 
     try {
       // Create receipt with all items
-      await axios.post(`${API}/receipts/create`, {
+      const response = await axios.post(`${API}/receipts/create`, {
         items: cart
       });
       
-      toast.success("Receipt created successfully!");
+      toast.success(`Receipt created! Total: $${response.data.total_amount}`);
       setCart([]);
       setShowDialog(false);
       fetchReceipts();
       fetchProducts(); // Refresh to get updated stock
     } catch (error) {
       console.error("Error creating receipt:", error);
-      toast.error(error.response?.data?.detail || "Failed to create receipt");
+      if (error.response?.status === 400) {
+        // Bad request - show specific error
+        toast.error(error.response.data?.detail || "Invalid data. Please check your items.");
+      } else if (error.response?.status === 404) {
+        toast.error("Product not found. Please refresh and try again.");
+      } else if (error.response) {
+        toast.error(`Error: ${error.response.data?.detail || 'Failed to create receipt'}`);
+      } else if (error.request) {
+        toast.error("Cannot connect to server. Please check your connection.");
+      } else {
+        toast.error("An unexpected error occurred. Please try again.");
+      }
     }
   };
 
