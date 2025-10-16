@@ -45,13 +45,24 @@ export default function Products() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation
+    if (parseFloat(formData.selling_price) < parseFloat(formData.cost_price)) {
+      toast.error("Selling price cannot be less than cost price!");
+      return;
+    }
+    
+    if (parseFloat(formData.quantity) < 0) {
+      toast.error("Quantity cannot be negative!");
+      return;
+    }
+    
     try {
       if (editingProduct) {
         await axios.put(`${API}/products/${editingProduct.id}`, formData);
-        toast.success("Product updated successfully");
+        toast.success("Product updated successfully!");
       } else {
         await axios.post(`${API}/products`, formData);
-        toast.success("Product added successfully");
+        toast.success("Product added successfully!");
       }
       
       setShowDialog(false);
@@ -59,7 +70,17 @@ export default function Products() {
       fetchProducts();
     } catch (error) {
       console.error("Error saving product:", error);
-      toast.error(error.response?.data?.detail || "Failed to save product");
+      if (error.response?.status === 400) {
+        toast.error(error.response.data?.detail || "Invalid product data");
+      } else if (error.response?.status === 404) {
+        toast.error("Product not found");
+      } else if (error.response) {
+        toast.error(`Error: ${error.response.data?.detail || 'Failed to save product'}`);
+      } else if (error.request) {
+        toast.error("Cannot connect to server. Please check your connection.");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
