@@ -313,6 +313,26 @@ async def get_dashboard_stats():
     }
 
 
+# Reset All Data
+@api_router.delete("/reset-all-data")
+async def reset_all_data():
+    """Delete all products, sales, and expenses - use with caution!"""
+    try:
+        # Delete all collections
+        await db.products.delete_many({})
+        await db.sales.delete_many({})
+        await db.expenses.delete_many({})
+        
+        return {
+            "message": "All data has been reset successfully",
+            "products_deleted": True,
+            "sales_deleted": True,
+            "expenses_deleted": True
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error resetting data: {str(e)}")
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
