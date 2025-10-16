@@ -19,12 +19,19 @@ export default function Dashboard() {
   }, []);
 
   const fetchDashboardStats = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API}/dashboard/stats`);
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
-      toast.error("Failed to load dashboard data");
+      if (error.response) {
+        toast.error(`Error: ${error.response.data?.detail || 'Failed to load dashboard'}`);
+      } else if (error.request) {
+        toast.error("Cannot connect to server. Please check your connection.");
+      } else {
+        toast.error("Failed to load dashboard data");
+      }
     } finally {
       setLoading(false);
     }
