@@ -104,6 +104,25 @@ async def get_products():
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product_input: ProductCreate):
+    # Validation
+    if product_input.selling_price < product_input.cost_price:
+        raise HTTPException(
+            status_code=400, 
+            detail="Selling price cannot be less than cost price"
+        )
+    
+    if product_input.quantity < 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="Quantity cannot be negative"
+        )
+    
+    if product_input.cost_price < 0 or product_input.selling_price < 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="Prices cannot be negative"
+        )
+    
     product_dict = product_input.model_dump()
     product = Product(**product_dict)
     
