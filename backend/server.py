@@ -60,6 +60,7 @@ class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    receipt_number: str = Field(default_factory=lambda: f"RCP-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}")
     product_id: str
     product_name: str
     quantity: float
