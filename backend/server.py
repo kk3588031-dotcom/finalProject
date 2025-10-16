@@ -331,76 +331,99 @@ async def get_receipts():
 @api_router.post("/receipts/create")
 async def create_multi_item_receipt(request: dict):
     """Create a receipt with multiple items"""
-    items = request.get('items', [])
-    
-    if not items:
-        raise HTTPException(status_code=400, detail="No items provided")
-    
-    # Generate receipt number
-    receipt_number = f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
-    
-    # Calculate totals
-    total_amount = 0
-    total_profit = 0
-    receipt_items = []
-    
-    for item in items:
-        # Get product to verify stock
-        product = await db.products.find_one({"id": item['product_id']}, {"_id": 0})
-        if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+    try:
+        items = request.get('items', [])
         
-        # Check stock
-        if product['quantity'] < item['quantity']:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Insufficient stock for {product['name']}. Available: {product['quantity']}"
+        if not items:
+            raise HTTPException(status_code=400, detail="No items provided. Please add items to cart.")
+        
+        # Validate items
+        for item in items:
+            if not item.get('product_id'):
+                raise HTTPException(status_code=400, detail="Invalid item: missing product ID")
+            if not item.get('quantity') or item['quantity'] <= 0:
+                raise HTTPException(status_code=400, detail="Invalid quantity. Must be greater than 0")
+        
+        # Generate receipt number
+        receipt_number = f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        
+        # Calculate totals
+        total_amount = 0
+        total_profit = 0
+        receipt_items = []
+        
+        for item in items:
+            # Get product to verify stock
+            product = await db.products.find_one({"id": item['product_id']}, {"_id": 0})
+            if not product:
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Product '{item.get('product_name', 'Unknown')}' not found. It may have been deleted."
+                )
+            
+            # Check stock
+            if product['quantity'] < item['quantity']:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Insufficient stock for '{product['name']}'. Available: {product['quantity']} {product.get('unit', 'units')}, Requested: {item['quantity']}"
+                )
+            
+            # Calculate item total and profit
+            item_total = item['quantity'] * item['selling_price']
+            item_profit = (item['selling_price'] - item['cost_price']) * item['quantity']
+            
+            total_amount += item_total
+            total_profit += item_profit
+            
+            # Add to receipt items
+            receipt_items.append({
+                "product_id": item['product_id'],
+                "product_name": item['product_name'],
+                "quantity": item['quantity'],
+                "unit": item.get('unit', 'kg'),
+                "selling_price": item['selling_price'],
+                "cost_price": item['cost_price'],
+                "total": item_total,
+                "profit": item_profit
+            })
+            
+            # Update product stock
+            new_quantity = product['quantity'] - item['quantity']
+            await db.products.update_one(
+                {"id": item['product_id']},
+                {"$set": {"quantity": new_quantity}}
             )
         
-        # Calculate item total and profit
-        item_total = item['quantity'] * item['selling_price']
-        item_profit = (item['selling_price'] - item['cost_price']) * item['quantity']
+        # Create receipt
+        receipt = {
+            "id": str(uuid.uuid4()),
+            "receipt_number": receipt_number,
+            "items": receipt_items,
+            "total_amount": round(total_amount, 2),
+            "total_profit": round(total_profit, 2),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
         
-        total_amount += item_total
-        total_profit += item_profit
+        await db.receipts.insert_one(receipt)
         
-        # Add to receipt items
-        receipt_items.append({
-            "product_id": item['product_id'],
-            "product_name": item['product_name'],
-            "quantity": item['quantity'],
-            "unit": item.get('unit', 'kg'),
-            "selling_price": item['selling_price'],
-            "cost_price": item['cost_price'],
-            "total": item_total,
-            "profit": item_profit
-        })
-        
-        # Update product stock
-        new_quantity = product['quantity'] - item['quantity']
-        await db.products.update_one(
-            {"id": item['product_id']},
-            {"$set": {"quantity": new_quantity}}
+        return {
+            "message": "Receipt created successfully",
+            "receipt_number": receipt_number,
+            "total_amount": round(total_amount, 2),
+            "total_profit": round(total_profit, 2),
+            "items_count": len(receipt_items)
+        }
+    
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        # Log unexpected errors
+        logger.error(f"Unexpected error creating receipt: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="An unexpected error occurred while creating the receipt. Please try again."
         )
-    
-    # Create receipt
-    receipt = {
-        "id": str(uuid.uuid4()),
-        "receipt_number": receipt_number,
-        "items": receipt_items,
-        "total_amount": round(total_amount, 2),
-        "total_profit": round(total_profit, 2),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.receipts.insert_one(receipt)
-    
-    return {
-        "message": "Receipt created successfully",
-        "receipt_number": receipt_number,
-        "total_amount": round(total_amount, 2),
-        "total_profit": round(total_profit, 2)
-    }
 
 @api_router.get("/receipts/{receipt_id}")
 async def get_receipt_by_id(receipt_id: str):
