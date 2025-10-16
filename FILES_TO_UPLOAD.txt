@@ -1,0 +1,30 @@
+📁 COMPLETE FILE LIST FOR GITHUB
+=====================================
+
+BACKEND FILES:
+--------------
+📄 backend/server.py (335 lines - Main API)
+📄 backend/requirements.txt (Python dependencies)
+📄 backend/.env.example (Environment template)
+
+FRONTEND FILES:
+---------------
+📄 frontend/src/App.js (Main application)
+📄 frontend/src/App.css (Global styles)
+📄 frontend/src/pages/Dashboard.js (Dashboard with reset button)
+📄 frontend/src/pages/Products.js (Product management)
+📄 frontend/src/pages/Sales.js (Sales tracking)
+📄 frontend/src/pages/Expenses.js (Expense tracking)
+📄 frontend/src/pages/Reports.js (Profit/Loss reports)
+📄 frontend/package.json (Node.js dependencies)
+📄 frontend/.env.example (Frontend environment)
+
+DOCUMENTATION:
+--------------
+📄 README.md (Main documentation)
+📄 .gitignore (Git ignore rules)
+
+TOTAL: 13 files
+=====================================
+
+All files are in: /app/omrans-fruits-app.zip
