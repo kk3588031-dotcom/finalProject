@@ -35,7 +35,16 @@ export default function CreateReceipt() {
       setProducts(response.data);
     } catch (error) {
       console.error("Error fetching products:", error);
-      toast.error("Failed to load products");
+      if (error.response) {
+        // Server responded with error
+        toast.error(`Error: ${error.response.data?.detail || 'Failed to load products'}`);
+      } else if (error.request) {
+        // Request made but no response
+        toast.error("Cannot connect to server. Please check your internet connection.");
+      } else {
+        // Something else happened
+        toast.error("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
