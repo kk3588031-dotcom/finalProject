@@ -318,6 +318,62 @@ async def get_dashboard_stats():
     }
 
 
+# Receipts Routes
+@api_router.get("/receipts")
+async def get_receipts():
+    """Get all receipts (sales) with receipt numbers"""
+    receipts = await db.sales.find({}, {"_id": 0}).sort("sale_date", -1).to_list(1000)
+    for receipt in receipts:
+        if isinstance(receipt.get('sale_date'), str):
+            receipt['sale_date'] = datetime.fromisoformat(receipt['sale_date'])
+        if isinstance(receipt.get('created_at'), str):
+            receipt['created_at'] = datetime.fromisoformat(receipt['created_at'])
+    return receipts
+
+@api_router.get("/receipts/{receipt_id}")
+async def get_receipt_by_id(receipt_id: str):
+    """Get a specific receipt by ID"""
+    receipt = await db.sales.find_one({"id": receipt_id}, {"_id": 0})
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    if isinstance(receipt.get('sale_date'), str):
+        receipt['sale_date'] = datetime.fromisoformat(receipt['sale_date'])
+    if isinstance(receipt.get('created_at'), str):
+        receipt['created_at'] = datetime.fromisoformat(receipt['created_at'])
+    
+    return receipt
+
+@api_router.get("/receipts/summary/totals")
+async def get_receipts_summary():
+    """Calculate total receipts amount"""
+    all_receipts = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    
+    total_receipts = len(all_receipts)
+    total_amount = sum(receipt.get('total_amount', 0) for receipt in all_receipts)
+    total_profit = sum(receipt.get('profit', 0) for receipt in all_receipts)
+    
+    # Get today's receipts
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_iso = today.isoformat()
+    
+    today_receipts = await db.sales.find(
+        {"sale_date": {"$gte": today_iso}},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    today_total = sum(receipt.get('total_amount', 0) for receipt in today_receipts)
+    today_count = len(today_receipts)
+    
+    return {
+        "total_receipts": total_receipts,
+        "total_amount": round(total_amount, 2),
+        "total_profit": round(total_profit, 2),
+        "today_receipts": today_count,
+        "today_total": round(today_total, 2)
+    }
+
+
 # Reset All Data
 @api_router.delete("/reset-all-data")
 async def reset_all_data():
