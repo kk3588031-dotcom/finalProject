@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card } from "../components/ui/card";
-import { TrendingUp, DollarSign, Package, AlertTriangle } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../components/ui/alert-dialog";
+import { TrendingUp, DollarSign, Package, AlertTriangle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -10,6 +12,7 @@ const API = `${BACKEND_URL}/api`;
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -24,6 +27,20 @@ export default function Dashboard() {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetAllData = async () => {
+    setResetting(true);
+    try {
+      await axios.delete(`${API}/reset-all-data`);
+      toast.success("All data has been reset successfully");
+      fetchDashboardStats();
+    } catch (error) {
+      console.error("Error resetting data:", error);
+      toast.error("Failed to reset data");
+    } finally {
+      setResetting(false);
     }
   };
 
