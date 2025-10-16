@@ -322,23 +322,93 @@ async def get_dashboard_stats():
 @api_router.get("/receipts")
 async def get_receipts():
     """Get all receipts (sales) with receipt numbers"""
-    receipts = await db.sales.find({}, {"_id": 0}).sort("sale_date", -1).to_list(1000)
+    receipts = await db.receipts.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for receipt in receipts:
-        if isinstance(receipt.get('sale_date'), str):
-            receipt['sale_date'] = datetime.fromisoformat(receipt['sale_date'])
         if isinstance(receipt.get('created_at'), str):
             receipt['created_at'] = datetime.fromisoformat(receipt['created_at'])
     return receipts
 
+@api_router.post("/receipts/create")
+async def create_multi_item_receipt(request: dict):
+    """Create a receipt with multiple items"""
+    items = request.get('items', [])
+    
+    if not items:
+        raise HTTPException(status_code=400, detail="No items provided")
+    
+    # Generate receipt number
+    receipt_number = f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    
+    # Calculate totals
+    total_amount = 0
+    total_profit = 0
+    receipt_items = []
+    
+    for item in items:
+        # Get product to verify stock
+        product = await db.products.find_one({"id": item['product_id']}, {"_id": 0})
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+        
+        # Check stock
+        if product['quantity'] < item['quantity']:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient stock for {product['name']}. Available: {product['quantity']}"
+            )
+        
+        # Calculate item total and profit
+        item_total = item['quantity'] * item['selling_price']
+        item_profit = (item['selling_price'] - item['cost_price']) * item['quantity']
+        
+        total_amount += item_total
+        total_profit += item_profit
+        
+        # Add to receipt items
+        receipt_items.append({
+            "product_id": item['product_id'],
+            "product_name": item['product_name'],
+            "quantity": item['quantity'],
+            "unit": item.get('unit', 'kg'),
+            "selling_price": item['selling_price'],
+            "cost_price": item['cost_price'],
+            "total": item_total,
+            "profit": item_profit
+        })
+        
+        # Update product stock
+        new_quantity = product['quantity'] - item['quantity']
+        await db.products.update_one(
+            {"id": item['product_id']},
+            {"$set": {"quantity": new_quantity}}
+        )
+    
+    # Create receipt
+    receipt = {
+        "id": str(uuid.uuid4()),
+        "receipt_number": receipt_number,
+        "items": receipt_items,
+        "total_amount": round(total_amount, 2),
+        "total_profit": round(total_profit, 2),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.receipts.insert_one(receipt)
+    
+    return {
+        "message": "Receipt created successfully",
+        "receipt_number": receipt_number,
+        "total_amount": round(total_amount, 2),
+        "total_profit": round(total_profit, 2)
+    }
+
 @api_router.get("/receipts/{receipt_id}")
 async def get_receipt_by_id(receipt_id: str):
     """Get a specific receipt by ID"""
-    receipt = await db.sales.find_one({"id": receipt_id}, {"_id": 0})
+    receipt = await db.receipts.find_one({"id": receipt_id}, {"_id": 0})
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
     
-    if isinstance(receipt.get('sale_date'), str):
-        receipt['sale_date'] = datetime.fromisoformat(receipt['sale_date'])
     if isinstance(receipt.get('created_at'), str):
         receipt['created_at'] = datetime.fromisoformat(receipt['created_at'])
     
@@ -347,18 +417,18 @@ async def get_receipt_by_id(receipt_id: str):
 @api_router.get("/receipts/summary/totals")
 async def get_receipts_summary():
     """Calculate total receipts amount"""
-    all_receipts = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    all_receipts = await db.receipts.find({}, {"_id": 0}).to_list(10000)
     
     total_receipts = len(all_receipts)
     total_amount = sum(receipt.get('total_amount', 0) for receipt in all_receipts)
-    total_profit = sum(receipt.get('profit', 0) for receipt in all_receipts)
+    total_profit = sum(receipt.get('total_profit', 0) for receipt in all_receipts)
     
     # Get today's receipts
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_iso = today.isoformat()
     
-    today_receipts = await db.sales.find(
-        {"sale_date": {"$gte": today_iso}},
+    today_receipts = await db.receipts.find(
+        {"created_at": {"$gte": today_iso}},
         {"_id": 0}
     ).to_list(10000)
     
