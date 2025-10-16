@@ -6,7 +6,7 @@ import Products from "./pages/Products";
 import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
-import Receipts from "./pages/Receipts";
+import CreateReceipt from "./pages/CreateReceipt";
 import { Toaster } from "./components/ui/sonner";
 import { Store, Package, ShoppingCart, Receipt, FileText, BarChart3 } from "lucide-react";
 
